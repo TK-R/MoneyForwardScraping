@@ -1,0 +1,1 @@
+MoneyForward‚©‚ç‘Ž‘ŽY‚ðŽæ‚Á‚Ä‚­‚éƒAƒŒ
