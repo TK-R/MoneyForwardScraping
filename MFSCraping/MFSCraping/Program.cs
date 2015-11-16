@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
+using MoneyForward;
 
 namespace MFSCraping
 {
@@ -13,7 +10,7 @@ namespace MFSCraping
         static void Main(string[] args)
         {
             var path = Environment.CurrentDirectory + "\\Data\\Auth.xml";
-            string mail, pass;
+            string mail = "", pass = "";
 
             // mail pass 
             if (args.Length >= 2)
@@ -43,6 +40,10 @@ namespace MFSCraping
             }
 
 
+            // Login 
+            var res = MFLib.GetAllAsset(mail, pass);
+
+            Console.WriteLine(res.Result);
 
         }
     }
