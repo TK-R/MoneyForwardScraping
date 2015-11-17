@@ -5,59 +5,79 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net;
+using HtmlAgilityPack;
 
 namespace MoneyForward
 {
     public class MFLib
     {
+
+        #region Param
+        /// <summary>
+        /// MoneyForwardのクッキー情報
+        /// </summary>
+        CookieContainer MFCoockie { set; get; }
+
         /// <summary>
         /// MoneyForwardのサインインURL
         /// </summary>
-        const string LoginUrl = "https://moneyforward.com/users/sign_in";
+        const string LoginUrl = "https://moneyforward.com/users/sign_in/";
 
         /// <summary>
         /// メインページのURL
         /// </summary>
         const string MainURL = "https://moneyforward.com/";
+        #endregion
 
         /// <summary>
         /// MoneyForwardへのログインを試みる
         /// </summary>
         /// <param name="mail">メールアドレス</param>
         /// <param name="password">パスワード</param>
-        /// <returns>取得したクッキー</returns>
-        public static async Task<CookieContainer> LoginAsync(string mail, string password)
+        public async Task<bool> LoginAsync(string mail, string password)
         {
-
             using (var handler = new HttpClientHandler())
             {
                 using (var client = new HttpClient(handler))
-                {
+                {  
+                    
+                    // ユーザーエージェント文字列をセット（オプション）
+                    client.DefaultRequestHeaders.Add(
+                        "User-Agent",
+                        "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko");
+
+                    // 受け入れ言語をセット（オプション）
+                    client.DefaultRequestHeaders.Add("Accept-Language", "ja-JP");
+
                     client.Timeout = TimeSpan.FromSeconds(10.0);
                     var content = new FormUrlEncodedContent(new Dictionary<string, string> {
-                                                                                { "next_url", string.Empty },
-                                                                                { "'user[email]", mail },
-                                                                                { "'user[password]", password }});
-
+                        { "utf8", "✓"},
+                        { "authenticity_token", "nwQHwXB83hanQC3uhuB8MrmoS0IkdPbaAFkcOe+OxdY=" },
+                        { "sign_in_session_service[email]", mail },
+                        { "sign_in_session_service[password]", password },
+                        { "commit",  "ログイン"}
+                    });
                     await client.PostAsync(LoginUrl, content);
-                    return handler.CookieContainer;
+                    MFCoockie = handler.CookieContainer;
+                    return true;
                 }
             }
         }
 
-        
+
         /// <summary>
         /// Coockieを使用してHTMLを取得する 
         /// </summary>
         /// <param name="uri">取得先のURL</param>
         /// <param name="cc">取得済みのCoockie</param>
         /// <returns>htmlソース</returns>
-        static async Task<string> GetWebPageAsync(Uri uri, CookieContainer cc)
+        async Task<string> GetWebPageAsync(Uri uri)
         {
-            var handler = new HttpClientHandler();
-            handler.CookieContainer = cc;
+            if (MFCoockie == null)
+                return null;
 
-            using (HttpClient client = new HttpClient(handler))
+            using (var handler = new HttpClientHandler() { CookieContainer = MFCoockie })
+            using (var client = new HttpClient(handler))
             {
                 client.Timeout = TimeSpan.FromSeconds(10.0);
 
@@ -85,18 +105,24 @@ namespace MoneyForward
                 return null;
             }
         }
+    
 
-        ///
-        public static async Task<int> GetAllAsset(string id, string password)
+        int AssetParse(string html)
         {
-            var coockie = await LoginAsync(id, password);
-            var html = await GetWebPageAsync(new Uri(MainURL), coockie);
-
-            // HTMLをパースしたい
 
 
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(html);
 
             return 0;
+        }
+
+
+        public async Task<int> GetAllAsset()
+        {
+            var htmlString = await GetWebPageAsync(new Uri(MainURL));
+            
+            return AssetParse(htmlString);
         }
 
     }

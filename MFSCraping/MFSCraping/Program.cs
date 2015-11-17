@@ -7,7 +7,7 @@ namespace MFSCraping
 {
     class Program
     {
-        static void Main(string[] args)
+        static  void Main(string[] args)
         {
             var path = Environment.CurrentDirectory + "\\Data\\Auth.xml";
             string mail = "", pass = "";
@@ -40,11 +40,15 @@ namespace MFSCraping
             }
 
 
+            
             // Login 
-            var res = MFLib.GetAllAsset(mail, pass);
+            var mflib = new MFLib();
+            if(!mflib.LoginAsync(mail, pass).Result)
+                return;
+
+            var res = mflib.GetAllAsset();
 
             Console.WriteLine(res.Result);
-
         }
     }
 }
