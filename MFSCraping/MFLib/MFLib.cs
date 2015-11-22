@@ -10,8 +10,7 @@ using HtmlAgilityPack;
 namespace MoneyForward
 {
     public class MFLib
-    {
-
+    { 
         #region Param
         /// <summary>
         /// MoneyForwardのクッキー情報
@@ -37,17 +36,17 @@ namespace MoneyForward
         public async Task<bool> LoginAsync(string mail, string password)
         {
             // サインイン画面からauthenticity_tokenを取得　
-            var html = await GetWebPageAsync(new Uri(MainURL));
+            var html = await GetWebPageAsync(new Uri(MainURL), null);
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(html);
             var nodes = htmlDoc.DocumentNode.SelectNodes(@"//input[@name=""authenticity_token""]");
             var authToken = nodes.First().Attributes["value"].Value;
-            
+
             using (var handler = new HttpClientHandler())
             {
                 using (var client = new HttpClient(handler))
-                {  
-                    
+                {
+
                     // ユーザーエージェント文字列をセット（オプション）
                     client.DefaultRequestHeaders.Add(
                         "User-Agent",
@@ -72,13 +71,17 @@ namespace MoneyForward
         }
 
         /// <summary>
-        /// Cookieを使用せずHTMLを取得する
+        /// Coockieを使用してHTMLを取得する 
         /// </summary>
-        /// <param name="uri"></param>
-        /// <returns></returns>
-        async Task<string> GetWebPageAsync(Uri uri)
+        /// <param name="uri">取得先のURL</param>
+        /// <param name="cc">取得済みのCoockie</param>
+        /// <returns>htmlソース</returns>
+        async Task<string> GetWebPageAsync(Uri uri, CookieContainer cookie)
         {
-            using (var handler = new HttpClientHandler())
+            // Cookieがnullでなければ使用する
+            using (var handler = (cookie != null ?
+                   new HttpClientHandler() { CookieContainer = cookie } :
+                   new HttpClientHandler()))
             using (var client = new HttpClient(handler))
             {
                 client.Timeout = TimeSpan.FromSeconds(10.0);
@@ -110,57 +113,39 @@ namespace MoneyForward
 
 
         /// <summary>
-        /// Coockieを使用してHTMLを取得する 
+        /// 総資産の値を返す
         /// </summary>
-        /// <param name="uri">取得先のURL</param>
-        /// <param name="cc">取得済みのCoockie</param>
-        /// <returns>htmlソース</returns>
-        async Task<string> GetWebPageAsyncWithCookie(Uri uri ,CookieContainer cookie)
-        {
-            
-            using (var handler = new HttpClientHandler() { CookieContainer = cookie })
-            using (var client = new HttpClient(handler))
-            {
-                client.Timeout = TimeSpan.FromSeconds(10.0);
-
-                try
-                {
-                    return await client.GetStringAsync(uri);
-                }
-                catch (HttpRequestException e)
-                {
-                    // 404エラーや、名前解決失敗など
-                    Console.WriteLine("\n例外発生!");
-                    // InnerExceptionも含めて、再帰的に例外メッセージを表示する
-                    Exception ex = e;
-                    while (ex != null)
-                    {
-                        Console.WriteLine("例外メッセージ: {0} ", ex.Message);
-                        ex = ex.InnerException;
-                    }
-                }
-                catch (TaskCanceledException e)
-                {
-                    Console.WriteLine("\nタイムアウト!");
-                    Console.WriteLine("例外メッセージ: {0} ", e.Message);
-                }
-                return null;
-            }
-        }
-    
-
+        /// <returns>***,***円</returns>
         public async Task<string> GetAllAsset()
         {
-            var htmlString = await GetWebPageAsyncWithCookie(new Uri(MainURL), MFCoockie);
+            if (MFCoockie == null)
+                return null;
+
+            var htmlString = await GetWebPageAsync(new Uri(MainURL), MFCoockie);
 
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(htmlString);
 
-            
-
             return htmlDoc.DocumentNode.SelectNodes(@"//div[@class=""heading-radius-box""]").First().InnerText;
-            
+
         }
 
+
+        /// <summary>
+        /// 総資産の値と前日比を返す
+        /// </summary>
+        /// <returns>***円, ***%</returns>
+        public async Task<string> GetAllAssetWithDiff()
+        {
+            if(MFCoockie == null)
+                return null;
+
+            var htmlString = await GetWebPageAsync(new Uri(MainURL), MFCoockie);
+
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(htmlString);
+            
+            return htmlDoc.DocumentNode.SelectNodes(@"//p[@class=""number heading-radius-box""]").First().InnerText;
+        }
     }
 }

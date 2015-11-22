@@ -12,13 +12,7 @@ namespace MFSCraping
             var path = Environment.CurrentDirectory + "\\Data\\Auth.xml";
             string mail = "", pass = "";
 
-            // mail pass 
-            if (args.Length >= 2)
-            {
-                mail = args[0];
-                pass = args[1];
-            }
-            else if (File.Exists(path))
+            if (File.Exists(path))
             {
 
                 var doc = XDocument.Load(path);
@@ -38,15 +32,13 @@ namespace MFSCraping
                 Console.WriteLine("MFScraping.exe <mail> <pass> or Create Auth.xml");
                 return;
             }
-
-
             
             // Login 
             var mflib = new MFLib();
             if(!mflib.LoginAsync(mail, pass).Result)
                 return;
 
-            var res = mflib.GetAllAsset();
+            var res = mflib.GetAllAssetWithDiff();
 
             Console.WriteLine(res.Result);
         }
