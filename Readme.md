@@ -1,1 +1,3 @@
-MoneyForward���瑍���Y������Ă���A��
+MoneyForwardから総資産を取ってくるアレ
+
+Auth_sample.xmlを参考にAuth.xmlを作ってあとはよしなにどうぞ。
