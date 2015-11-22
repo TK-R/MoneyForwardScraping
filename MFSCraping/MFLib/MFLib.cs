@@ -36,6 +36,13 @@ namespace MoneyForward
         /// <param name="password">パスワード</param>
         public async Task<bool> LoginAsync(string mail, string password)
         {
+            // サインイン画面からauthenticity_tokenを取得　
+            var html = await GetWebPageAsync(new Uri(MainURL));
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(html);
+            var nodes = htmlDoc.DocumentNode.SelectNodes(@"//input[@name=""authenticity_token""]");
+            var authToken = nodes.First().Attributes["value"].Value;
+            
             using (var handler = new HttpClientHandler())
             {
                 using (var client = new HttpClient(handler))
@@ -52,7 +59,7 @@ namespace MoneyForward
                     client.Timeout = TimeSpan.FromSeconds(10.0);
                     var content = new FormUrlEncodedContent(new Dictionary<string, string> {
                         { "utf8", "✓"},
-                        { "authenticity_token", "nwQHwXB83hanQC3uhuB8MrmoS0IkdPbaAFkcOe+OxdY=" },
+                        { "authenticity_token", authToken },
                         { "sign_in_session_service[email]", mail },
                         { "sign_in_session_service[password]", password },
                         { "commit",  "ログイン"}
@@ -64,6 +71,43 @@ namespace MoneyForward
             }
         }
 
+        /// <summary>
+        /// Cookieを使用せずHTMLを取得する
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <returns></returns>
+        async Task<string> GetWebPageAsync(Uri uri)
+        {
+            using (var handler = new HttpClientHandler())
+            using (var client = new HttpClient(handler))
+            {
+                client.Timeout = TimeSpan.FromSeconds(10.0);
+
+                try
+                {
+                    return await client.GetStringAsync(uri);
+                }
+                catch (HttpRequestException e)
+                {
+                    // 404エラーや、名前解決失敗など
+                    Console.WriteLine("\n例外発生!");
+                    // InnerExceptionも含めて、再帰的に例外メッセージを表示する
+                    Exception ex = e;
+                    while (ex != null)
+                    {
+                        Console.WriteLine("例外メッセージ: {0} ", ex.Message);
+                        ex = ex.InnerException;
+                    }
+                }
+                catch (TaskCanceledException e)
+                {
+                    Console.WriteLine("\nタイムアウト!");
+                    Console.WriteLine("例外メッセージ: {0} ", e.Message);
+                }
+                return null;
+            }
+        }
+
 
         /// <summary>
         /// Coockieを使用してHTMLを取得する 
@@ -71,12 +115,10 @@ namespace MoneyForward
         /// <param name="uri">取得先のURL</param>
         /// <param name="cc">取得済みのCoockie</param>
         /// <returns>htmlソース</returns>
-        async Task<string> GetWebPageAsync(Uri uri)
+        async Task<string> GetWebPageAsyncWithCookie(Uri uri ,CookieContainer cookie)
         {
-            if (MFCoockie == null)
-                return null;
-
-            using (var handler = new HttpClientHandler() { CookieContainer = MFCoockie })
+            
+            using (var handler = new HttpClientHandler() { CookieContainer = cookie })
             using (var client = new HttpClient(handler))
             {
                 client.Timeout = TimeSpan.FromSeconds(10.0);
@@ -107,22 +149,17 @@ namespace MoneyForward
         }
     
 
-        int AssetParse(string html)
+        public async Task<string> GetAllAsset()
         {
-
+            var htmlString = await GetWebPageAsyncWithCookie(new Uri(MainURL), MFCoockie);
 
             var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(html);
+            htmlDoc.LoadHtml(htmlString);
 
-            return 0;
-        }
-
-
-        public async Task<int> GetAllAsset()
-        {
-            var htmlString = await GetWebPageAsync(new Uri(MainURL));
             
-            return AssetParse(htmlString);
+
+            return htmlDoc.DocumentNode.SelectNodes(@"//div[@class=""heading-radius-box""]").First().InnerText;
+            
         }
 
     }
